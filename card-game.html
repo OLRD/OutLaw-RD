@@ -58,7 +58,7 @@ var C=[
  {k:'k',n:'أسود',c:'#18181b',b:'#ff2b3a',t:'#fff',w:10,lo:10,hi:10,rk:5}
 ];
 var T={k:['الاجهم'],y:['شلبي الاكبر','ايسا'],p:['ملك الثلج','روز','الساحره الام','اردينس'],u:['الفارو','الصيني','باتريك شلبي','ايدا','روبرت تشارلي'],g:['جبر','قيصر','هلال','علي الحوت','شامان']};
-var FIX={'شلبي الاكبر':[9,8],'ايسا':[8,10],'الاجهم':[10,10]};
+var FIX={'شلبي الاكبر':[9,8],'ايسا':[8,10],'الاجهم':[10,10],'سنان':[0,0]};
 var chars=D.c.map(function(x){return {n:x[0],s:D.i[x[1]]}});
 function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function shuf(arr,r){for(var i=arr.length-1;i>0;i--){var j=Math.floor(r()*(i+1)),t=arr[i];arr[i]=arr[j];arr[j]=t}return arr}
@@ -83,28 +83,38 @@ function card(ch,on,dim,delay){
   var d=el('div','cd'+(on?' sel':'')+(dim?' dim':''));
   d.style.setProperty('--c',ch.col.c);d.style.setProperty('--b',ch.col.b);d.style.setProperty('--t',ch.col.t);
   var im=el('img');im.src=ch.s;im.alt='';im.draggable=false;
-  d.appendChild(im);d.appendChild(el('div','bd',ch.col.n));d.appendChild(el('div','nm',ch.n));d.appendChild(el('div','st','⚔ '+ch.a+'   🛡 '+ch.d));
+  d.appendChild(im);d.appendChild(el('div','bd',ch.col.n));d.appendChild(el('div','nm',ch.n));d.appendChild(el('div','st','⚔ '+ch.a+'   🛡 '+ch.d));if(ch.n==='سنان')d.appendChild(el('div','st','نقص عدد'));
   if(delay!=null){d.classList.add('fl');d.style.animationDelay=delay+'ms'}return d;
 }
 function back(){var d=el('div','cd bk'),im=el('img');im.src=D.i[1];im.alt='';d.appendChild(im);d.appendChild(el('div','nm','؟'));return d}
 function cards(list,pick,mark){var g=el('div','hand');list.forEach(function(i){var c=card(chars[i],mark===i,mark!=null&&mark!==i);if(pick)c.onclick=function(){pick(i)};g.appendChild(c)});return g}
 try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(function(){})}catch(e){}
 var H=location.hash.slice(1),PR=new URLSearchParams(H),HID=PR.get('h'),SL=+PR.get('s');
+var ICE={config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'},{urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]}};
 if(HID)playerMain();else hostMain();
 
 /* ================= المستضيف ================= */
 function hostMain(){
-  var S={ph:'lobby',id:null,nm:['',''],cn:[null,null],on:[false,false],pos:[[],[]],tk:[[],[]],go:[false,false],rd:[false,false],lock:false,cd:null,h:[[],[]],u:[[],[]],ab:[-1,-1],used:[false,false],arm:[-1,-1],pk:[null,null],nx:[{a:0,d:0},{a:0,d:0}],sc:[0,0],r:1,cur:null,log:[],pend:[null,null],fin:false},tm=null,peer=new Peer();
-  peer.on('open',function(id){S.id=id;render()});
+  var S={ph:'lobby',id:null,nm:['',''],cn:[null,null],on:[false,false],pos:[[],[]],tk:[[],[]],go:[false,false],rd:[false,false],lock:false,cd:null,h:[[],[]],u:[[],[]],ab:[-1,-1],used:[false,false],arm:[-1,-1],pk:[null,null],nx:[{a:0,d:0},{a:0,d:0}],sc:[0,0],r:1,cur:null,log:[],pend:[null,null],fin:false},tm=null,peer,KEY='olrd_host',sv=null;
+  try{sv=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+  var hid=sv&&sv.id||null;
+  if(sv&&sv.S){for(var k in sv.S)S[k]=sv.S[k];S.cn=[null,null];S.on=[false,false];S.cd=null;if(S.ph==='pick'&&S.rd[0]&&S.rd[1])S.lock=true}
+  function save(){try{var o={};for(var k in S)if(k!=='cn'&&k!=='on')o[k]=S[k];localStorage.setItem(KEY,JSON.stringify({id:hid,S:o}))}catch(e){}}
+  function newGame(){if(!confirm('تبدأ مباراة جديدة؟'))return;try{localStorage.setItem(KEY,JSON.stringify({id:hid}))}catch(e){}location.reload()}
+  function mk(){peer=hid?new Peer(hid,ICE):new Peer(ICE);
+  peer.on('open',function(id){S.id=id;hid=id;save();render()});
   peer.on('connection',function(c){
     var s=+c.metadata;if(s!==0&&s!==1)return;
     c.on('open',function(){S.cn[s]=c;S.on[s]=true;send(s);render()});
     c.on('data',function(m){act(s,m)});
     c.on('close',function(){if(S.cn[s]===c){S.on[s]=false;render()}});
   });
-  peer.on('error',function(){render()});
+  peer.on('error',function(e){if(e&&e.type==='unavailable-id')setTimeout(mk,3000);else render()});
+  peer.on('disconnected',function(){try{peer.reconnect()}catch(e){}});}
+  mk();
+  setInterval(function(){if(peer.disconnected&&!peer.destroyed){try{peer.reconnect()}catch(e){}}},4000);
   function send(p){var c=S.cn[p];if(c&&c.open)c.send(view(p))}
-  function all(){send(0);send(1);render()}
+  function all(){send(0);send(1);save();render()}
   function view(p){
     var o=1-p,v={ph:S.ph,me:S.nm[p],op:S.nm[o],sc:[S.sc[p],S.sc[o]],r:S.r,fin:S.fin,go:S.go[p],rd:S.rd[p],lock:S.lock,cd:S.cd};
     if(S.ph==='pick'||S.ph==='lobby'){v.pos=S.pos[p].map(function(c,i){return S.tk[p].indexOf(i)>-1?c:-1});v.n=S.tk[p].length}
@@ -165,7 +175,8 @@ function hostMain(){
     all();
   }
   function st(p){return !S.on[p]?'⚪ غير متصل':S.ph==='pick'?(S.rd[p]?'✅ جاهز':S.go[p]?'⏳ قيد الاختيار ('+S.tk[p].length+'/10)':'🟡 متصل'):'🟢 متصل'}
-  function render(){
+  function render(){render0();if(S.ph!=='lobby')$('app').appendChild(bar(btn('🔄 مباراة جديدة',newGame,1)))}
+  function render0(){
     var a=$('app');a.innerHTML='';
     if(S.ph==='lobby'){
       var f=el('section','pl');
@@ -213,21 +224,25 @@ function hostMain(){
 function playerMain(){
   var V=null,peer,cn=null;
   function tx(m){if(cn&&cn.open)cn.send(m)}
+  var ERR='',T0=Date.now();
   function connect(){
-    peer=new Peer();
+    peer=new Peer(ICE);
     peer.on('open',function(){join()});
-    peer.on('error',function(){setTimeout(function(){try{peer.destroy()}catch(e){}connect()},3000)});
+    peer.on('error',function(e){ERR=(e&&e.type)||'error';R();setTimeout(function(){if(!peer.open){try{peer.destroy()}catch(x){}connect()}else join()},3000)});
     peer.on('disconnected',function(){try{peer.reconnect()}catch(e){}});
   }
   function join(){
-    cn=peer.connect(HID,{metadata:SL,reliable:true});
-    cn.on('data',function(m){V=m;R()});
-    cn.on('close',function(){V=null;R();setTimeout(join,2000)});
-    cn.on('error',function(){setTimeout(join,3000)});
+    if(!peer||!peer.open)return;
+    if(cn){cn.stale=true;try{cn.close()}catch(e){}}
+    var c=peer.connect(HID,{metadata:SL,reliable:true});cn=c;
+    c.on('data',function(m){V=m;ERR='';R()});
+    c.on('close',function(){if(c.stale)return;V=null;R();setTimeout(join,2000)});
+    c.on('error',function(){if(c.stale)return;setTimeout(join,3000)});
   }
+  setInterval(function(){if(!V){R();if(peer&&peer.open)join()}},7000);
   function R(){
     var a=$('app');a.innerHTML='';
-    if(!V){a.appendChild(sub('جاري الاتصال بالمستضيف…'));return}
+    if(!V){if(Date.now()-T0>12000&&!ERR)a.appendChild(sub('طول الاتصال؟ جرّب تفتح الرابط من Safari أو Chrome مباشرة (مو من داخل تطبيق مثل ديسكورد)، أو غيّر الشبكة (واي فاي أو بيانات).'));a.appendChild(sub('جاري الاتصال بالمستضيف…'+(ERR==='peer-unavailable'?' (المستضيف غير موجود، تأكد إنه فاتح صفحته وإن الرابط جديد)':ERR?' ('+ERR+')':'')));return}
     a.appendChild(el('h1','',V.me));
     if(V.ph==='lobby'){a.appendChild(sub('بانتظار المستضيف يبدأ…'));return}
     if(V.ph==='pick'){
