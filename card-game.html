@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>لعبة بطاقات اوتلاو</title>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
@@ -90,30 +90,36 @@ function back(){var d=el('div','cd bk'),im=el('img');im.src=D.i[1];im.alt='';d.a
 function cards(list,pick,mark){var g=el('div','hand');list.forEach(function(i){var c=card(chars[i],mark===i,mark!=null&&mark!==i);if(pick)c.onclick=function(){pick(i)};g.appendChild(c)});return g}
 try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(function(){})}catch(e){}
 var H=location.hash.slice(1),PR=new URLSearchParams(H),HID=PR.get('h'),SL=+PR.get('s');
-var ICE={config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'},{urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]}};
+var BR=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081','wss://mqtt.eclipseprojects.io:443/mqtt'];
+function rnd(n){var a=new Uint8Array(n),o='';(window.crypto||window.msCrypto).getRandomValues(a);for(var i=0;i<n;i++)o+=(a[i]%36).toString(36);return o}
 if(HID)playerMain();else hostMain();
 
 /* ================= المستضيف ================= */
 function hostMain(){
-  var S={ph:'lobby',id:null,nm:['',''],cn:[null,null],on:[false,false],pos:[[],[]],tk:[[],[]],go:[false,false],rd:[false,false],lock:false,cd:null,h:[[],[]],u:[[],[]],ab:[-1,-1],used:[false,false],arm:[-1,-1],pk:[null,null],nx:[{a:0,d:0},{a:0,d:0}],sc:[0,0],r:1,cur:null,log:[],pend:[null,null],fin:false},tm=null,peer,KEY='olrd_host',sv=null;
+  var S={ph:'lobby',id:null,nm:['',''],cn:[null,null],on:[false,false],pos:[[],[]],tk:[[],[]],go:[false,false],rd:[false,false],lock:false,cd:null,h:[[],[]],u:[[],[]],ab:[-1,-1],used:[false,false],arm:[-1,-1],pk:[null,null],nx:[{a:0,d:0},{a:0,d:0}],sc:[0,0],r:1,cur:null,log:[],pend:[null,null],fin:false},tm=null,KEY='olrd_host',sv=null,cls=[],seen=[0,0];
   try{sv=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
-  var hid=sv&&sv.id||null;
+  var hid=sv&&sv.id||rnd(10),sk=sv&&sv.sk||[rnd(10),rnd(10)];S.id=hid;
   if(sv&&sv.S){for(var k in sv.S)S[k]=sv.S[k];S.cn=[null,null];S.on=[false,false];S.cd=null;if(S.ph==='pick'&&S.rd[0]&&S.rd[1])S.lock=true}
-  function save(){try{var o={};for(var k in S)if(k!=='cn'&&k!=='on')o[k]=S[k];localStorage.setItem(KEY,JSON.stringify({id:hid,S:o}))}catch(e){}}
-  function newGame(){if(!confirm('تبدأ مباراة جديدة؟'))return;try{localStorage.setItem(KEY,JSON.stringify({id:hid}))}catch(e){}location.reload()}
-  function mk(){peer=hid?new Peer(hid,ICE):new Peer(ICE);
-  peer.on('open',function(id){S.id=id;hid=id;save();render()});
-  peer.on('connection',function(c){
-    var s=+c.metadata;if(s!==0&&s!==1)return;
-    c.on('open',function(){S.cn[s]=c;S.on[s]=true;send(s);render()});
-    c.on('data',function(m){act(s,m)});
-    c.on('close',function(){if(S.cn[s]===c){S.on[s]=false;render()}});
+  function save(){try{var o={};for(var k in S)if(k!=='cn'&&k!=='on')o[k]=S[k];localStorage.setItem(KEY,JSON.stringify({id:hid,sk:sk,S:o}))}catch(e){}}
+  function newGame(){if(!confirm('تبدأ مباراة جديدة؟'))return;try{localStorage.setItem(KEY,JSON.stringify({id:hid,sk:sk}))}catch(e){}location.reload()}
+  var T='olrd1/'+hid;
+  function nb(){return cls.filter(function(c){return c.connected}).length}
+  function pub(p,m){var x=JSON.stringify(m),t=T+'/p'+p+sk[p];cls.forEach(function(c){if(c.connected)c.publish(t,x)})}
+  function send(p){pub(p,view(p))}
+  function onm(m){
+    if(!m||(m.s!==0&&m.s!==1)||m.k!==sk[m.s])return;
+    var p=m.s;seen[p]=Date.now();
+    if(m.t==='hb'||m.t==='hello'){if(!S.on[p]||m.t==='hello'){S.on[p]=true;send(p);render()}return}
+    S.on[p]=true;act(p,m);
+  }
+  BR.forEach(function(u){
+    var c=mqtt.connect(u,{clientId:'olrdh'+rnd(8),reconnectPeriod:3000,connectTimeout:8000,clean:true});
+    c.on('connect',function(){c.subscribe(T+'/h');render()});
+    c.on('close',function(){render()});c.on('error',function(){});
+    c.on('message',function(t,pl){try{onm(JSON.parse(pl.toString()))}catch(e){}});
+    cls.push(c);
   });
-  peer.on('error',function(e){if(e&&e.type==='unavailable-id')setTimeout(mk,3000);else render()});
-  peer.on('disconnected',function(){try{peer.reconnect()}catch(e){}});}
-  mk();
-  setInterval(function(){if(peer.disconnected&&!peer.destroyed){try{peer.reconnect()}catch(e){}}},4000);
-  function send(p){var c=S.cn[p];if(c&&c.open)c.send(view(p))}
+  setInterval(function(){[0,1].forEach(function(p){if(S.on[p]&&Date.now()-seen[p]>15000){S.on[p]=false;render()}pub(p,{t:'ping'})})},5000);
   function all(){send(0);send(1);save();render()}
   function view(p){
     var o=1-p,v={ph:S.ph,me:S.nm[p],op:S.nm[o],sc:[S.sc[p],S.sc[o]],r:S.r,fin:S.fin,go:S.go[p],rd:S.rd[p],lock:S.lock,cd:S.cd};
@@ -182,15 +188,15 @@ function hostMain(){
       var f=el('section','pl');
       [0,1].forEach(function(p){var i=el('input','pn');i.id='in'+p;i.placeholder='اسم اللاعب '+(p+1);i.value=S.nm[p];i.style.marginBottom='8px';i.style.width='100%';f.appendChild(i)});
       a.appendChild(f);
-      var b=btn('🚀 بدء',function(){S.nm=[0,1].map(function(p){return $('in'+p).value.trim()||'اللاعب '+(p+1)});deal();S.ph='pick';all()});b.disabled=!S.id;
-      a.appendChild(bar(b));if(!S.id)a.appendChild(sub('جاري تجهيز الاتصال…'));return;
+      var b=btn('🚀 بدء',function(){S.nm=[0,1].map(function(p){return $('in'+p).value.trim()||'اللاعب '+(p+1)});deal();S.ph='pick';all()});b.disabled=!nb();
+      a.appendChild(bar(b));if(!nb())a.appendChild(sub('جاري الاتصال بالسيرفرات…'));return;
     }
     var base=location.href.split('#')[0];
     if(S.ph==='pick'||S.ph==='ab'){
       [0,1].forEach(function(p){
         var s=el('section','pl'),h=el('div','ph');h.appendChild(el('div','pn',S.nm[p]));h.appendChild(el('span','cnt',st(p)));
         s.appendChild(h);
-        if(S.ph==='pick'){var l=base+'#h='+S.id+'&s='+p;var i=el('input','pn',null);i.value=l;i.readOnly=true;i.style.width='100%';i.style.direction='ltr';
+        if(S.ph==='pick'){var l=base+'#h='+hid+'&s='+p+'&k='+sk[p];var i=el('input','pn',null);i.value=l;i.readOnly=true;i.style.width='100%';i.style.direction='ltr';
           s.appendChild(i);s.appendChild(bar(btn('📋 انسخ رابط '+S.nm[p],function(){i.select();try{navigator.clipboard.writeText(l)}catch(e){document.execCommand('copy')}this.textContent='✔ اننسخ'})))}
         else s.appendChild(el('div','sum',S.ab[p]>=0?'اختار قدرته ✅':'يختار قدرته…'));
         a.appendChild(s)});
@@ -222,27 +228,19 @@ function hostMain(){
 
 /* ================= اللاعب ================= */
 function playerMain(){
-  var V=null,peer,cn=null;
-  function tx(m){if(cn&&cn.open)cn.send(m)}
-  var ERR='',T0=Date.now();
+  var V=null,cl=null,bi=0,last=0,SK=PR.get('k')||'',T='olrd1/'+HID,mine=T+'/p'+SL+SK;
+  function tx(m){if(cl&&cl.connected){m.s=SL;m.k=SK;cl.publish(T+'/h',JSON.stringify(m))}}
   function connect(){
-    peer=new Peer(ICE);
-    peer.on('open',function(){join()});
-    peer.on('error',function(e){ERR=(e&&e.type)||'error';R();setTimeout(function(){if(!peer.open){try{peer.destroy()}catch(x){}connect()}else join()},3000)});
-    peer.on('disconnected',function(){try{peer.reconnect()}catch(e){}});
+    var c=mqtt.connect(BR[bi%BR.length],{clientId:'olrdp'+rnd(8),reconnectPeriod:3000,connectTimeout:8000,clean:true});cl=c;
+    var to=setTimeout(function(){if(!c.connected){try{c.end(true)}catch(e){}bi++;connect()}},9000);
+    c.on('connect',function(){clearTimeout(to);c.subscribe(mine);tx({t:'hello'});R()});
+    c.on('close',function(){R()});c.on('error',function(){});
+    c.on('message',function(t,pl){try{var m=JSON.parse(pl.toString());last=Date.now();if(m.t==='ping')return;V=m;R()}catch(e){}});
   }
-  function join(){
-    if(!peer||!peer.open)return;
-    if(cn){cn.stale=true;try{cn.close()}catch(e){}}
-    var c=peer.connect(HID,{metadata:SL,reliable:true});cn=c;
-    c.on('data',function(m){V=m;ERR='';R()});
-    c.on('close',function(){if(c.stale)return;V=null;R();setTimeout(join,2000)});
-    c.on('error',function(){if(c.stale)return;setTimeout(join,3000)});
-  }
-  setInterval(function(){if(!V){R();if(peer&&peer.open)join()}},7000);
+  setInterval(function(){tx({t:'hb'});if(V&&Date.now()-last>20000){V=null}R()},4000);
   function R(){
     var a=$('app');a.innerHTML='';
-    if(!V){if(Date.now()-T0>12000&&!ERR)a.appendChild(sub('طول الاتصال؟ جرّب تفتح الرابط من Safari أو Chrome مباشرة (مو من داخل تطبيق مثل ديسكورد)، أو غيّر الشبكة (واي فاي أو بيانات).'));a.appendChild(sub('جاري الاتصال بالمستضيف…'+(ERR==='peer-unavailable'?' (المستضيف غير موجود، تأكد إنه فاتح صفحته وإن الرابط جديد)':ERR?' ('+ERR+')':'')));return}
+    if(!V){a.appendChild(sub(!cl||!cl.connected?'جاري الاتصال بالسيرفر…':'متصل بالسيرفر، بانتظار المستضيف… تأكد إنه فاتح صفحته وإن الرابط جديد.'));return}
     a.appendChild(el('h1','',V.me));
     if(V.ph==='lobby'){a.appendChild(sub('بانتظار المستضيف يبدأ…'));return}
     if(V.ph==='pick'){
