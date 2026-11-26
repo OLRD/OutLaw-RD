@@ -117,8 +117,10 @@ var C=[
  {k:'y',n:'ذهبي',c:'#f5b301',b:'#f5b301',t:'#000',w:20,bd:22,rk:4},
  {k:'k',n:'أسود',c:'#18181b',b:'#ff2b3a',t:'#fff',w:10,bd:28,rk:5}
 ];
-var T={k:['الاجهم'],y:['شلبي الاكبر','ايسا','تنين ملك الثلج','التنين الزومبي'],p:['ملك الثلج','روز','الساحره الام','اردينس','العملاق','الجعبوق','بلو نيز'],u:['الفارو','الصيني','باتريك شلبي','ايدا','روبرت تشارلي'],g:['جبر','قيصر','هلال','علي الحوت','شامان','الفا','سلامنكا','ابو فأس','شهرزاد (زوطون)','ثابت','ورده','مهاب','الينورا','شجاع','ابا الطوارئ','بيرلو','الزول','غُميده','جساس','اسامه ربيعه','مروان','سرداح','ابو جزره']};
+var T={k:['الاجهم'],y:['شلبي الاكبر','ايسا','تنين ملك الثلج','التنين الزومبي'],p:['ملك الثلج','روز','الساحره الام','الساحره','اردينس','العملاق','الجعبوق','بلو نيز'],u:['الفارو','الصيني','باتريك شلبي','ايدا','روبرت تشارلي'],g:['جبر','قيصر','هلال','علي الحوت','شامان','الفا','سلامنكا','العمده ربيعه','ابو فأس','شهرزاد (زوطون)','ثابت','ورده','مهاب','الينورا','شجاع','ابا الطوارئ','بيرلو','الزول','غُميده','جساس','اسامه ربيعه','مروان','سرداح','ابو جزره']};
 var FIX={'شلبي الاكبر':[13,9],'ايسا':[9,13],'الاجهم':[14,14],'سنان':[0,0],'طفاش':[0,0]};
+/* أرقام الأبيض والأخضر والأزرق: متوازنة عشان التعادل يقل (هجوم/دفاع) */
+var FX2={'الساحره':[9,6],'شلبي الاوسط':[3,3],'شلبي الاصغر':[1,1],'نمر شلبي':[3,4],'ايلا':[1,1],'سعيده برحه':[2,2],'دبوس':[2,3],'العمده ربيعه':[3,3],'عروج':[1,1],'منيره':[1,2],'ليل':[2,3],'ذئب':[1,1],'عكرمه':[2,3],'المجنون':[1,1],'اليكس':[1,2],'الحكيم':[3,3],'فيصل خشبه':[1,2],'لينا':[1,1],'فهدون':[1,2],'سنوره':[3,4],'الجده':[2,2],'سهم':[1,2],'خونجيس':[4,4],'يحيى':[2,3],'الارقم':[4,4],'الفريدو كابتشينو':[4,4],'زيتونه (رست)':[2,2],'صقر':[3,3],'سعد القناص':[1,1],'زيوس':[3,4],'كاسبر':[3,4],'لورا':[2,2],'ابا المجانين':[1,2],'الاعور':[3,3],'عبدالله البطال':[4,4],'المحقق بيل':[3,3],'جبر':[4,4],'قيصر':[3,3],'مهاب':[2,3],'هلال':[4,5],'علي الحوت':[2,2],'سلامنكا':[5,6],'شامان':[3,3],'الينورا':[3,4],'ابو جزره':[3,4],'ابو فأس':[2,3],'الزول':[4,5],'سرداح':[4,5],'اسامه ربيعه':[5,6],'شهرزاد (زوطون)':[3,4],'بيرلو':[3,4],'غُميده':[2,3],'مروان':[4,4],'شجاع':[5,5],'ابا الطوارئ':[2,3],'ورده':[5,5],'الفا':[4,5],'جساس':[2,2],'ثابت':[5,5],'باتريك شلبي':[4,4],'ايدا':[5,6],'الفارو':[6,6],'الصيني':[5,5],'روبرت تشارلي':[4,4]};
 var SPC={c:'#ff6a1a',b:'#ff6a1a',t:'#000',n:'خاصة'};
 var SPT={'سنان':'يقتل أي بطاقة بيضاء من الضحك','طفاش':'سلبية: تخسّر فريقك الجولة','ثانوس':'لدغة: يسحب 4 هجوم ودفاع من خصمه (بنفسجي وأقل)'};
 var SPR={k:.051,y:.117,sp:{'سنان':.117,'ثانوس':.117,'طفاش':.117}};
@@ -134,6 +136,7 @@ chars.forEach(function(ch){
   var rr=f?0:R();
   ch.a=f?f[0]:Math.round(c.bd*(.25+.5*rr));
   ch.d=f?f[1]:c.bd-ch.a;
+  var f2=FX2[ch.n];if(f2){ch.a=f2[0];ch.d=f2[1]}
   by[c.k].push(ch);
 });
 chars.forEach(function(c){if(c.n==='ثانوس'){c.a=2;c.d=2}});
@@ -261,7 +264,7 @@ function hostMain(){
       if(m.t==='ready'&&S.tk[p].length===10&&!S.lock){S.rd[p]=true;
         if(S.rd[0]&&S.rd[1]&&!tm){S.cd=3;tm=setInterval(function(){S.cd--;if(S.cd<=0){stopCd();S.lock=true}all()},1000)}}
       if(m.t==='unready'&&!S.lock){S.rd[p]=false;stopCd()}
-    }else if(S.ph==='ab'){if(m.t==='ab'&&m.i>=0&&m.i<6)S.ab[p]=m.i}
+    }else if(S.ph==='ab'){}
     else if(S.ph==='play'&&!S.cur&&!S.fin){
       if(S.tb&&m.t!=='pick'){all();return}
       if(m.t==='pick'&&S.pk[p]==null&&S.h[p].indexOf(m.i)>-1)S.pk[p]=m.i;
@@ -295,6 +298,7 @@ function hostMain(){
     [0,1].forEach(function(p){if(sinKills(c[p],c[1-p]))L(p,'سنان قتل بطاقة '+N(1-p)+' من الضحك')});
     [0,1].forEach(function(p){if(TF(c[p])&&!TF(c[1-p]))L(p,'طفاش خسّر '+N(p)+' الجولة')});
     [0,1].forEach(function(p){if(S.sw&&S.sw[p]){L(p,S.sw[p]);S.sw[p]=null}});
+    S.rv=S.rv||[false,false];[0,1].forEach(function(p){if(S.used[p])S.rv[p]=true});
     S.arm=[-1,-1];S.pend=[null,null];S.cur={c:c,a:a,d:d,cu:cu};all();
   }
   function tiebreak(st){
@@ -342,6 +346,7 @@ function hostMain(){
       lbSec(a);return;
     }
     var base=location.href.split('#')[0];
+    if(S.ph==='ab'){var fx=0;[0,1].forEach(function(p){if(S.ab[p]<0){S.ab[p]=Math.floor(Math.random()*6);fx=1}});if(fx)setTimeout(all,0)}
     if(S.ph==='pick'||S.ph==='ab'){
       var duo=div('duo');a.appendChild(duo);
       [0,1].forEach(function(p){
@@ -351,9 +356,9 @@ function hostMain(){
           var l=base+'#h='+hid+'&s='+p+'&k='+sk[p],i=el('input','pn');i.value=l;i.readOnly=true;i.style.cssText='width:100%;direction:ltr;margin-top:8px';
           s.appendChild(i);s.appendChild(bar(btn('📋 انسخ رابط اللاعب '+(p+1),function(){i.select();try{navigator.clipboard.writeText(l)}catch(e){document.execCommand('copy')}this.textContent='✔ اننسخ'})));
         }else s.appendChild(!S.on[p]?stat('⚪ غير متصل',0):S.ab[p]>=0?stat('✅ اختار قدرته',1):stat('⏳ يختار قدرته…',0));
-        if(S.ph==='ab'&&S.ab[p]>=0){var h0=div('pco',abx(S.ab[p],'جاهزة للاستخدام'));h0.style.marginTop='12px';if(MQ.matches){h0.style.display='block';s.appendChild(h0)}}
+        if(S.ph==='ab'&&S.ab[p]>=0){var h0=div('pco',abx(-1,'✅ اختار قدرته (مخفية لين تنكشف بالجولة)'));h0.style.marginTop='12px';if(MQ.matches){h0.style.display='block';s.appendChild(h0)}}
         duo.appendChild(s)});
-      if(S.ph==='pick'){var n=btn('⏭ التالي',function(){S.ph='ab';all()});n.disabled=!S.lock;a.appendChild(bar(n));
+      if(S.ph==='pick'){var n=btn('⏭ التالي',function(){[0,1].forEach(function(p){S.ab[p]=Math.floor(Math.random()*6)});S.ph='ab';all()});n.disabled=!S.lock;a.appendChild(bar(n));
         a.appendChild(sub(S.lock?'انقفل الاختيار.':S.cd!=null?'يقفل بعد '+S.cd+' ثواني':''))}
       else{var g=btn('🚀 ابدأ الجولات',function(){S.h=[S.tk[0].map(function(i){return S.pos[0][i]}),S.tk[1].map(function(i){return S.pos[1][i]})];S.ph='play';all()});g.disabled=S.ab[0]<0||S.ab[1]<0;a.appendChild(bar(g))}
       return;
@@ -362,7 +367,9 @@ function hostMain(){
     var ds=S.tb?S.tbs:S.sc,hl=Math.max(S.h[0].length,S.h[1].length),hd=el('div','sum',N(0)+' '+ds[0]+' : '+ds[1]+' '+N(1)+(S.fin?(S.tb?'  ·  نتيجة الفاصلة':''):'  ·  '+(S.tb?tbName(S.tb,S.r,hl):'الجولة '+S.r+'/'+tot)));hd.style.cssText='text-align:center;font-size:1.1rem;color:#f2ece8';a.appendChild(MQ.matches?board(N(0),N(1),ds[0],ds[1],S.r,S.fin,0,tot,S.tb,hl):hd);
     if(S.tb&&!S.fin)a.appendChild(tbNote(S.tb));
     function hab(p){if(S.tb)return el('div','sum','بدون قدرات');
+      if(!S.cur){if((S.rv||[])[p])return abx(S.ab[p],'✔ مستخدمة','off');return abx(-1,'🔒 تنكشف عند كشف الجولة')}
       var live=S.arm[p]>=0||S.pend[p]||(S.cur&&S.log.some(function(l){return l.p===p&&l.t.indexOf(' استخدم')>-1}));
+      if(!live&&!(S.rv||[])[p])return abx(-1,'🔒 ما استخدمها');
       return abx(S.ab[p],S.arm[p]>=0?'⚡ مفعّلة هذي الجولة':S.pend[p]?'⚡ يختار بطاقة للقدرة':live?'⚡ استخدمها هالجولة':S.used[p]?'✔ مستخدمة':'متاحة، ما استخدمها',live?'live':S.used[p]?'off':'')}
     if(S.fin){a.appendChild(el('h1','','الفائز: '+N(S.win)+' 🏆'));lbSec(a);return}
     if(!S.cur)shown=0;
@@ -438,10 +445,8 @@ function playerMain(){
       a.appendChild(bar(b));a.appendChild(sub(V.lock?'انقفل اختيارك، بانتظار المستضيف':V.cd!=null?'يقفل بعد '+V.cd+' ثواني':''));return;
     }
     if(V.ph==='ab'){
-      a.appendChild(sub('اختر قدرتك (تستخدمها مرة وحدة في المباراة)'));
-      var ag=MQ.matches?div('abgrid'):a;if(MQ.matches)a.appendChild(ag);
-      AB.forEach(function(t,i){var x=btn(t,function(){tx({t:'ab',i:i})},V.ab!==i);x.style.cssText='display:block;width:100%;margin:8px 0';if(MQ.matches)x.insertBefore(el('b','',ABT[i]),x.firstChild);ag.appendChild(x)});
-      if(V.ab>=0)a.appendChild(sub('تمام، بانتظار المستضيف…'));return;
+      a.appendChild(sub('هذي قدرتك العشوائية (تستخدمها مرة وحدة في المباراة)'));
+      if(V.ab>=0){var bx=abx(V.ab,'قدرتك');bx.style.margin='14px auto';a.appendChild(bx);a.appendChild(sub('بانتظار المستضيف…'))}else a.appendChild(sub('جاري التوزيع…'));return;
     }
     var tot=V.r-1+Math.min((V.h||[]).length,V.oh||0);
     var hl=Math.max((V.h||[]).length,V.oh||0),hd=el('div','sum',V.me+' '+V.sc[0]+' : '+V.sc[1]+' '+V.op+(V.fin?(V.tb?'  ·  نتيجة الفاصلة':''):'  ·  '+(V.tb?tbName(V.tb,V.r,hl):'الجولة '+V.r+'/'+tot)));hd.style.cssText='text-align:center;font-size:1.1rem;color:#f2ece8';
